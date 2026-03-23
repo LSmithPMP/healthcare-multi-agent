@@ -1,0 +1,687 @@
+{
+  "name": "Week 3 Assignment: Healthcare Multi-Agent System (Combined)",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "id": "3c3f1c6d-101c-4ef0-a8e5-5a3842074c9c",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -48,
+        -48
+      ],
+      "webhookId": "healthcare-coordinator-chat"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Healthcare Coordinator � the primary interface for a multi-agent healthcare assistant system.\n\nYour role is to understand user intent and route queries to the correct specialist agent. You do NOT answer healthcare questions directly. You delegate to the appropriate sub-agent and return their response.\n\n## Routing Rules\n\n**Route to Doctor Booking Agent when the user asks about:**\n- Finding a doctor by specialty (cardiologist, pediatrician, dermatologist, etc.)\n- Checking doctor availability or appointment slots\n- Booking, scheduling, or confirming an appointment\n- Doctor contact information or phone numbers\n- Available specialties: Nephrology, Orthopedics, Ophthalmology, Cardiology, Radiology, Gynecology, Pediatrics, Psychiatry, Pulmonology, Endocrinology, Dermatology, Oncology\n\n**Route to Hospital and ER Agent when the user asks about:**\n- Finding a hospital by name, city, or state\n- Hospital quality ratings or star ratings\n- Emergency room locations or ambulance availability\n- Hospital ownership, type, or certifications\n- Comparing hospitals\n- Urgent/emergency care near a ZIP code\n\n**Route to Diagnostics Agent when the user asks about:**\n- Lab tests or diagnostic tests (MRI, CT Scan, X-Ray, Ultrasound, Blood Test, ECG, Cholesterol, Mammogram)\n- Test preparation instructions\n- Health packages (Cancer Screening, Diabetes Management, Heart Care, Orthopedic, Women's Wellness, Full Body Checkup)\n- Emailing test prep instructions\n- Which hospitals offer a specific test\n\n## Multi-Intent Routing\nIf a query spans multiple agents (e.g., 'Find a cardiologist and the nearest hospital with a 5-star rating'), call BOTH relevant agents and combine their responses into a unified, coherent reply.\n\n## Response Format\n- Always greet the user warmly on first message\n- Be concise and professional\n- Clearly present the sub-agent findings\n- If unsure which agent to route to, ask one clarifying question\n- Never expose internal agent names to the user � present as a seamless experience\n\n## Fallback\nIf the query is completely unrelated to healthcare (doctors, hospitals, tests, emergencies), politely inform the user that you are a healthcare assistant and can only help with medical service queries."
+        }
+      },
+      "id": "6baa1af3-a6d7-4e9d-817c-6d8fd126568c",
+      "name": "Healthcare Coordinator Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        224,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "sessionKey": "sessionId",
+        "contextWindowLength": 10
+      },
+      "id": "49bc8844-5839-4ab1-b1f3-71f4329d6548",
+      "name": "Coordinator - Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        192,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "name": "DoctorBookingAgent",
+        "description": "Routes queries about finding doctors, checking doctor availability, booking appointments, and doctor contact information. Handles all 12 medical specialties: Nephrology, Orthopedics, Ophthalmology, Cardiology, Radiology, Gynecology, Pediatrics, Psychiatry, Pulmonology, Endocrinology, Dermatology, Oncology.",
+        "workflowId": "={{ $workflow.id }}",
+        "fields": {
+          "values": [
+            {
+              "name": "query",
+              "stringValue": "={{ $fromAI('query', 'The user query to send to the Doctor Booking Agent', 'string') }}"
+            },
+            {
+              "name": "agent",
+              "stringValue": "doctor_booking"
+            }
+          ]
+        }
+      },
+      "id": "abb407be-cffe-4466-a6a4-054a2dbeef98",
+      "name": "Doctor Booking Agent Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "name": "HospitalERAgent",
+        "description": "Routes queries about finding hospitals by location or name, comparing hospital quality ratings (1-5 stars), locating emergency rooms with ambulance availability by ZIP code, and hospital contact information. Covers 3,401 hospitals nationwide and 32 emergency locations.",
+        "workflowId": "={{ $workflow.id }}",
+        "fields": {
+          "values": [
+            {
+              "name": "query",
+              "stringValue": "={{ $fromAI('query', 'The user query to send to the Hospital and ER Agent', 'string') }}"
+            },
+            {
+              "name": "agent",
+              "stringValue": "hospital_er"
+            }
+          ]
+        }
+      },
+      "id": "e4a94204-1338-4d97-99fc-69ef38cb89d5",
+      "name": "Hospital ER Agent Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        512,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "name": "DiagnosticsAgent",
+        "description": "Routes queries about diagnostic tests (MRI, CT Scan, X-Ray, Ultrasound, Blood Test, ECG, Cholesterol Test, Mammogram), test preparation instructions, health packages (Cancer Screening, Diabetes Management, Heart Care, Orthopedic, Women's Wellness, Full Body Checkup), and emailing prep instructions to a patient.",
+        "workflowId": "={{ $workflow.id }}",
+        "fields": {
+          "values": [
+            {
+              "name": "query",
+              "stringValue": "={{ $fromAI('query', 'The user query to send to the Diagnostics Agent', 'string') }}"
+            },
+            {
+              "name": "agent",
+              "stringValue": "diagnostics"
+            }
+          ]
+        }
+      },
+      "id": "e57d1cb8-4aef-49c6-a233-32b1370a968d",
+      "name": "Diagnostics Agent Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Doctor Booking Agent for a healthcare assistant system.\n\nYour job is to help users:\n1. Find doctors by specialization\n2. Check doctor availability\n3. Book appointments\n4. Provide doctor contact information\n\nYou have access to two Google Sheets tools:\n- **Doctor Info Tool**: Contains doctor names, specializations, and contact numbers (28 doctors across 12 specialties: Nephrology, Orthopedics, Ophthalmology, Cardiology, Radiology, Gynecology, Pediatrics, Psychiatry, Pulmonology, Endocrinology, Dermatology, Oncology)\n- **Doctor Availability Tool**: Contains appointment slots for March 1-7 2025, 8:00 AM to 5:30 PM in 30-minute increments. is_available=1 means open, is_available=0 means booked.\n\nWorkflow:\n1. When user asks for a doctor by specialty, search Doctor Info first\n2. Once you have the doctor_id, check Doctor Availability for open slots\n3. Present available times clearly in AM/PM format\n4. If booking, confirm the appointment details and note the slot\n\nAlways be professional, concise, and patient-focused.\nFormat appointment times as: Monday March 3 at 10:00 AM\nIf no availability, suggest the next available doctor in the same specialty."
+        }
+      },
+      "id": "42ee28f4-1bb6-4a31-af6d-76138ef832a3",
+      "name": "Doctor Booking Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        224,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "1bccba36-5609-4e50-99cf-7cb575277f0f",
+      "name": "Doctor Booking - OpenAI GPT-4o-mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        16,
+        720
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "y4aRrdUYSZdOAw9L",
+          "name": "OpenAi account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "1R1kKdLu7nipu-vWlc9UavgNofmlpfgFm",
+          "mode": "id"
+        }
+      },
+      "id": "351c3572-8945-4b9c-8122-ed18d620efce",
+      "name": "Get Doctor Info",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "1jSeXEFI-NxVY2k4lfGfaoywL3hR2XyGo",
+          "mode": "id"
+        }
+      },
+      "id": "d64af4a2-93f7-4a90-ba87-43874b076847",
+      "name": "Get Doctor Availability",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Hospital and Emergency Room Agent for a healthcare assistant system.\n\nYour job is to help users:\n1. Find hospitals by name, city, or state\n2. Compare hospital quality ratings (1-5 stars)\n3. Locate emergency rooms with ambulance availability by ZIP code\n4. Provide hospital contact information and address\n5. Report on hospital quality metrics (mortality, safety, readmission, patient experience)\n\nYou have access to two Google Sheets tools:\n- **Hospital General Info Tool**: Contains 3,401 hospitals nationwide with full details including overall rating (1-5), mortality comparison, safety of care comparison, readmission comparison, patient experience comparison, effectiveness, timeliness, and imaging efficiency. Ownership types include: Government - Federal, Government - Hospital District or Authority, Government - Local, Government - State, Proprietary, Voluntary non-profit - Church, Voluntary non-profit - Other, Voluntary non-profit - Private.\n- **Hospital Emergency Tool**: Contains 32 emergency locations indexed by ZIP code with ambulance availability (Yes/No). ZIP codes covered: 10001-10003 (NYC), 20001-20002 (DC), 30001, 30301 (Atlanta), 33101 (Miami), 60601 (Chicago), 70112 (New Orleans), 73301 (Austin), 85001 (Phoenix), 90001 (LA), 94101, 94404 (SF Bay Area), 98101 (Seattle).\n\nGuidelines:\n- For emergency queries, ALWAYS check the Emergency Tool first and highlight ambulance availability\n- For hospital comparisons, use the star ratings and quality metrics\n- When rating is 'Not Available', mention the hospital may not participate in CMS reporting\n- Always provide the hospital phone number when found\n- Format addresses clearly: Street, City, State ZIP\n- For state-wide searches, list top-rated hospitals first"
+        }
+      },
+      "id": "b051b090-d61a-4dc1-ae68-7d6387c18838",
+      "name": "Hospital and ER Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        256,
+        960
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "7ad859b7-090b-4d15-ae2a-43e44e79d90a",
+      "name": "Hospital ER - OpenAI GPT-4o-mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "y4aRrdUYSZdOAw9L",
+          "name": "OpenAi account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "1IOPMW8TqbnuXPfgOj9WwVxIjNeqT5wyy",
+          "mode": "id"
+        }
+      },
+      "id": "de2766e0-af58-41d3-9f2e-f28c6949bedc",
+      "name": "Get Hospital General Info",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "1K9VE04FKQ4x1j_SPpPlhsA7fTnoAxNcO",
+          "mode": "id"
+        }
+      },
+      "id": "bcc8eeb4-ce16-4335-8c6d-ac9abdc257e8",
+      "name": "Get Emergency Data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Diagnostics Agent for a healthcare assistant system.\n\nYour job is to help users:\n1. Find hospitals that offer specific diagnostic tests\n2. Explain preparation instructions for lab tests\n3. Identify health packages available at hospitals\n4. Send test preparation instructions via email when requested\n\nYou have access to:\n- **Hospital Lab Tests Tool**: Contains diagnostic test data for 3,401 hospitals. Each record includes: Provider ID, Hospital Name, Address, City, State, ZIP, Phone, Test Type, Health Package, and Preparation Instructions.\n\nTest Types available: MRI, CT Scan, X-Ray, Ultrasound, Blood Test, ECG, Cholesterol Test, Mammogram\n\nHealth Packages available:\n- Cancer Screening\n- Diabetes Management\n- Heart Care\n- Orthopedic Package\n- Women's Wellness\n- Full Body Checkup\n\nPreparation Instructions vary by test. Common examples:\n- MRI: Remove all metal objects; inform technician of implants\n- CT Scan: May require contrast dye; avoid eating 4 hours before if contrast is used\n- Blood Test: Fast for 8-12 hours; drink water only\n- Ultrasound: May require full bladder; avoid gas-producing foods\n- Mammogram: Avoid deodorant/lotion on day of test\n- ECG: No special prep needed; wear comfortable clothing\n\n- **Gmail Tool**: Use this to email preparation instructions to the user when they provide their email address.\n\nGuidelines:\n- Always include the hospital phone number in results\n- When listing hospitals for a test, include city and state for easy identification\n- For email requests, compose a clear, professional email with test name, hospital info, and full prep instructions\n- Subject line format: 'Your [Test Name] Preparation Instructions - [Hospital Name]'\n- If user asks about a health package, list all tests included in that package"
+        }
+      },
+      "id": "aad17c4b-f31a-47e5-bd0c-93906eda5cee",
+      "name": "Diagnostics Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        224,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "e9cdcb78-44a5-497b-84ac-b00ec2c4720d",
+      "name": "Diagnostics - OpenAI GPT-4o-mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1696
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "y4aRrdUYSZdOAw9L",
+          "name": "OpenAi account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "1zyyD_-kBVVi76YNBp4c7ek54GZEJnQsu",
+          "mode": "id"
+        }
+      },
+      "id": "c8170cdc-b2c5-4ca2-b659-25f0dd273a33",
+      "name": "Get Hospital Lab Tests",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "5f8a71a0-8a01-4669-b76f-896008d56644",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        1696
+      ],
+      "webhookId": "690fa66f-45b8-47fb-a92f-06ad4cb091b9"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        688,
+        720
+      ],
+      "id": "d2a6379d-a4a2-469c-b233-2f52f1e16d7b",
+      "name": "Simple Memory Buffer"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        688,
+        1216
+      ],
+      "id": "92c77156-b0a0-498b-97cd-4c8157d3bb8f",
+      "name": "Simple Memory Buffer II"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        1728
+      ],
+      "id": "3b020624-2b59-4109-8cfc-553e6cd37431",
+      "name": "Simple Memory Buffer III"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        512
+      ],
+      "id": "b0194b35-840b-439d-8dad-65c560768d95",
+      "name": "Doctor Boking Execute Trigger"
+    },
+    {
+      "parameters": {},
+      "id": "b001b14c-850a-4caa-9e4e-c1d3a87c2929",
+      "name": "Doctor Booking",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        400
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        176
+      ],
+      "id": "d023c785-07cd-4a28-978f-51e17d7d7b7d",
+      "name": "Coordinator Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "2vTxklh1AeC0F7mO",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Healthcare Coordinator Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Coordinator - Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Healthcare Coordinator Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doctor Booking Agent Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Healthcare Coordinator Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doctor Booking - OpenAI GPT-4o-mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Doctor Booking Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Doctor Info": {
+      "main": [
+        [
+          {
+            "node": "Doctor Booking Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Doctor Availability": {
+      "main": [
+        [
+          {
+            "node": "Doctor Booking Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hospital ER - OpenAI GPT-4o-mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Hospital and ER Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Hospital General Info": {
+      "main": [
+        [
+          {
+            "node": "Hospital and ER Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Emergency Data": {
+      "main": [
+        [
+          {
+            "node": "Hospital and ER Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Diagnostics - OpenAI GPT-4o-mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Diagnostics Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Hospital Lab Tests": {
+      "main": [
+        [
+          {
+            "node": "Diagnostics Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Gmail": {
+      "main": [
+        [
+          {
+            "node": "Diagnostics Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory Buffer": {
+      "ai_memory": [
+        [
+          {
+            "node": "Doctor Booking Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory Buffer II": {
+      "ai_memory": [
+        [
+          {
+            "node": "Hospital and ER Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory Buffer III": {
+      "ai_memory": [
+        [
+          {
+            "node": "Diagnostics Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hospital ER Agent Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Healthcare Coordinator Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Diagnostics Agent Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Healthcare Coordinator Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doctor Boking Execute Trigger": {
+      "main": [
+        [
+          {
+            "node": "Doctor Booking Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doctor Booking": {
+      "main": [
+        [
+          {
+            "node": "Doctor Booking Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Coordinator Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Healthcare Coordinator Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "002e98b8-f103-49de-8598-6f32f5385e8a",
+  "meta": {
+    "instanceId": "35af61cdb10af63706b8451b1603885f61fa5f7c5839f5f0bddf787166bda6f7"
+  },
+  "id": "NXmd56G436iU9jkZ",
+  "tags": [
+    {
+      "updatedAt": "2026-03-06T02:54:09.327Z",
+      "createdAt": "2026-03-06T02:54:09.327Z",
+      "id": "9AvrEi3aSjpmdGRX",
+      "name": "Diagnostics Agent"
+    },
+    {
+      "updatedAt": "2026-03-06T02:53:15.825Z",
+      "createdAt": "2026-03-06T02:51:19.293Z",
+      "id": "iiVSIvJH2Y5nH9cz",
+      "name": "Doctor Booking Agent"
+    },
+    {
+      "updatedAt": "2026-03-06T02:50:19.447Z",
+      "createdAt": "2026-03-06T02:50:19.447Z",
+      "id": "lJvc3WCuWbjCCqvE",
+      "name": "Health Care Coordinator"
+    },
+    {
+      "updatedAt": "2026-03-06T02:53:47.662Z",
+      "createdAt": "2026-03-06T02:53:47.662Z",
+      "id": "wa7WzzugLNkRQRMD",
+      "name": "Hospital & ER Agent"
+    }
+  ]
+}
