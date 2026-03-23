@@ -3,6 +3,8 @@
 > **Applied Agentic AI Program · Interview Kickstart · Spring 2026**  
 > Lamonte Smith
 
+![Healthcare Multi-Agent Workflow](healthcare-workflow-diagram.png)
+---
 A conversational **multi-agent AI system** built in n8n that orchestrates three specialized healthcare agents — Doctor Booking, Hospital & ER, and Diagnostics — through a central Coordinator Agent. Powered by GPT-4o and GPT-4o-mini, backed by five live Google Sheets datasets covering 3,400+ hospitals, 28 doctors across 12 specialties, and 8 diagnostic test types.
 
 ---
